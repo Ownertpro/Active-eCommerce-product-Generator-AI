@@ -122,6 +122,12 @@ export const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+    // Generation options
+    const [tone, setTone] = useState<string>('persuasive');
+    const [temperature, setTemperature] = useState<number>(0.8);
+    const [imageStyle, setImageStyle] = useState<string>('studio');
+    const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '16:9'>('1:1');
+
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -198,13 +204,13 @@ export const App: React.FC = () => {
 
         try {
             // Generate text details first
-            const details = await generateProductDetails(productName, language, userApiKey);
+            const details = await generateProductDetails(productName, language, userApiKey, tone, temperature);
             setGeneratedData(details);
 
             // Generate images in parallel
             const [image1Result, image2Result] = await Promise.allSettled([
-                details.imagePrompt ? generateProductImage(details.imagePrompt, userApiKey) : Promise.reject(new Error('No se generó prompt para la imagen 1')),
-                details.imagePrompt2 ? generateProductImage(details.imagePrompt2, userApiKey) : Promise.reject(new Error('No se generó prompt para la imagen 2'))
+                details.imagePrompt ? generateProductImage(details.imagePrompt, userApiKey, imageStyle, aspectRatio) : Promise.reject(new Error('No se generó prompt para la imagen 1')),
+                details.imagePrompt2 ? generateProductImage(details.imagePrompt2, userApiKey, imageStyle, aspectRatio) : Promise.reject(new Error('No se generó prompt para la imagen 2'))
             ]);
 
             if (image1Result.status === 'fulfilled') {
@@ -237,7 +243,7 @@ export const App: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [productName, language, userApiKey]);
+    }, [productName, language, userApiKey, tone, temperature, imageStyle, aspectRatio]);
 
     const handleSaveToDatabase = useCallback(async () => {
         if (!generatedData || (!imageUrl && !imageUrl2)) {
@@ -327,31 +333,8 @@ export const App: React.FC = () => {
         setShowApiGuide(false);
     }, []);
 
-    // If the API key is not ready, show the selection screen.
-    if (!apiKeyReady) {
-        return (
-            <>
-                <ApiKeySelectionScreen 
-                    onSelectKey={handleSelectKey} 
-                    onOpenSettings={() => setIsSettingsOpen(true)} 
-                />
-                 <SettingsModal 
-                    isOpen={isSettingsOpen}
-                    onClose={() => setIsSettingsOpen(false)}
-                    onSave={handleSaveSettings}
-                    onShowApiGuide={() => {
-                        setIsSettingsOpen(false);
-                        setShowApiGuide(true);
-                    }}
-                    initialApiKey={userApiKey}
-                    initialApiUrl={apiUrl}
-                />
-            </>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans">
+        <>
             <SettingsModal 
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
@@ -364,66 +347,84 @@ export const App: React.FC = () => {
                 initialApiUrl={apiUrl}
             />
             {showApiGuide && <ApiGuide onClose={() => setShowApiGuide(false)} />}
-            <div className="w-full max-w-4xl mx-auto">
-                <header className="relative text-center mb-8">
-                     <button 
-                        onClick={() => setIsSettingsOpen(true)}
-                        className="absolute top-0 right-0 p-2 text-gray-400 hover:text-white transition-colors"
-                        aria-label="Configuración"
-                    >
-                        <SettingsIcon className="w-6 h-6" />
-                    </button>
-                    <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 flex items-center justify-center gap-3">
-                        <SparklesIcon className="w-8 h-8 sm:w-10 sm:h-10" />
-                        Generador de Productos
-                    </h1>
-                    <p className="text-gray-400 mt-2 text-lg">
-                        Crea descripciones, precios e imágenes de productos al instante con IA.
-                    </p>
-                </header>
+            
+            {!apiKeyReady ? (
+                <ApiKeySelectionScreen 
+                    onSelectKey={handleSelectKey} 
+                    onOpenSettings={() => setIsSettingsOpen(true)} 
+                />
+            ) : (
+                <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans">
+                    <div className="w-full max-w-4xl mx-auto">
+                        <header className="relative text-center mb-8">
+                             <button 
+                                onClick={() => setIsSettingsOpen(true)}
+                                className="absolute top-0 right-0 p-2 text-gray-400 hover:text-white transition-colors"
+                                aria-label="Configuración"
+                            >
+                                <SettingsIcon className="w-6 h-6" />
+                            </button>
+                            <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 flex items-center justify-center gap-3">
+                                <SparklesIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+                                Generador de Productos
+                            </h1>
+                            <p className="text-gray-400 mt-2 text-lg">
+                                Crea descripciones, precios e imágenes de productos al instante con IA.
+                            </p>
+                        </header>
 
-                <main className="flex flex-col gap-8">
-                    <ProductInput
-                        productName={productName}
-                        setProductName={handleProductNameChange}
-                        onGenerate={handleGenerate}
-                        isLoading={isLoading}
-                        error={error}
-                        successMessage={successMessage}
-                        language={language}
-                        setLanguage={setLanguage}
-                        categoryId={categoryId}
-                        setCategoryId={setCategoryId}
-                        stockQuantity={stockQuantity}
-                        setStockQuantity={setStockQuantity}
-                    />
+                        <main className="flex flex-col gap-8">
+                            <ProductInput
+                                productName={productName}
+                                setProductName={handleProductNameChange}
+                                onGenerate={handleGenerate}
+                                isLoading={isLoading}
+                                error={error}
+                                successMessage={successMessage}
+                                language={language}
+                                setLanguage={setLanguage}
+                                categoryId={categoryId}
+                                setCategoryId={setCategoryId}
+                                stockQuantity={stockQuantity}
+                                setStockQuantity={setStockQuantity}
+                                tone={tone}
+                                setTone={setTone}
+                                temperature={temperature}
+                                setTemperature={setTemperature}
+                                imageStyle={imageStyle}
+                                setImageStyle={setImageStyle}
+                                aspectRatio={aspectRatio}
+                                setAspectRatio={setAspectRatio}
+                            />
 
-                    {isLoading && !generatedData && <Loader />}
+                            {isLoading && !generatedData && <Loader />}
 
-                    {!isLoading && !generatedData && !error && (
-                        <div className="text-center text-gray-500 py-10">
-                            <p>Ingrese el nombre de un producto para comenzar.</p>
-                        </div>
-                    )}
+                            {!isLoading && !generatedData && !error && (
+                                <div className="text-center text-gray-500 py-10">
+                                    <p>Ingrese el nombre de un producto para comenzar.</p>
+                                </div>
+                            )}
 
-                    {generatedData && (
-                        <ProductCard
-                            data={generatedData}
-                            imageUrl={imageUrl}
-                            imageUrl2={imageUrl2}
-                            areImagesLoading={isLoading}
-                            onSave={handleSaveToDatabase}
-                            isSaving={isSaving}
-                            saveError={saveError}
-                            saveSuccess={saveSuccess}
-                            onReset={handleReset}
-                        />
-                    )}
-                </main>
-                 <footer className="text-center mt-12 text-gray-600 text-sm">
-                    <p>Desarrollado con React, Tailwind CSS y la API de Gemini.</p>
-                </footer>
-            </div>
-        </div>
+                            {generatedData && (
+                                <ProductCard
+                                    data={generatedData}
+                                    imageUrl={imageUrl}
+                                    imageUrl2={imageUrl2}
+                                    areImagesLoading={isLoading}
+                                    onSave={handleSaveToDatabase}
+                                    isSaving={isSaving}
+                                    saveError={saveError}
+                                    saveSuccess={saveSuccess}
+                                    onReset={handleReset}
+                                />
+                            )}
+                        </main>
+                         <footer className="text-center mt-12 text-gray-600 text-sm">
+                            <p>Desarrollado con React, Tailwind CSS y la API de Gemini.</p>
+                        </footer>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };

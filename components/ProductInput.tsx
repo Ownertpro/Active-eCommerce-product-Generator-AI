@@ -16,11 +16,20 @@ interface ProductInputProps {
     setCategoryId: (id: number) => void;
     stockQuantity: number;
     setStockQuantity: (qty: number) => void;
+    tone: string;
+    setTone: (tone: string) => void;
+    temperature: number;
+    setTemperature: (temp: number) => void;
+    imageStyle: string;
+    setImageStyle: (style: string) => void;
+    aspectRatio: '1:1' | '4:3' | '16:9';
+    setAspectRatio: (ratio: '1:1' | '4:3' | '16:9') => void;
 }
 
 export const ProductInput: React.FC<ProductInputProps> = ({ 
     productName, setProductName, onGenerate, isLoading, error, successMessage, 
-    language, setLanguage, categoryId, setCategoryId, stockQuantity, setStockQuantity
+    language, setLanguage, categoryId, setCategoryId, stockQuantity, setStockQuantity,
+    tone, setTone, temperature, setTemperature, imageStyle, setImageStyle, aspectRatio, setAspectRatio
 }) => {
     
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -118,12 +127,96 @@ export const ProductInput: React.FC<ProductInputProps> = ({
                     </button>
                 </div>
             </div>
+
+            <details className="mt-4 group">
+                <summary className="list-none flex items-center gap-2 cursor-pointer text-gray-400 hover:text-white transition-colors">
+                    <span>Opciones Avanzadas</span>
+                    <svg className="w-4 h-4 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div className="mt-4 pt-4 border-t border-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
+                    <div>
+                        <label htmlFor="tone-select" className="block text-sm font-medium text-gray-400 mb-1">Tono de la Descripción</label>
+                        <select
+                            id="tone-select"
+                            value={tone}
+                            onChange={(e) => setTone(e.target.value)}
+                            disabled={isLoading}
+                            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                            <option value="persuasive">Persuasivo</option>
+                            <option value="professional">Profesional</option>
+                            <option value="friendly">Amistoso</option>
+                            <option value="technical">Técnico</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="temperature-slider" className="block text-sm font-medium text-gray-400 mb-1">
+                            Creatividad: <span className="font-bold text-purple-400">{temperature}</span>
+                        </label>
+                        <input
+                            id="temperature-slider"
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value={temperature}
+                            onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                            disabled={isLoading}
+                            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                        />
+                    </div>
+                     <div>
+                        <label htmlFor="style-select" className="block text-sm font-medium text-gray-400 mb-1">Estilo de Imagen</label>
+                        <select
+                            id="style-select"
+                            value={imageStyle}
+                            onChange={(e) => setImageStyle(e.target.value)}
+                            disabled={isLoading}
+                            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                            <option value="studio">Foto de Estudio</option>
+                            <option value="lifestyle">Estilo de Vida</option>
+                            <option value="minimalist">Minimalista</option>
+                            <option value="closeup">Primer Plano (Detalles)</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label htmlFor="ratio-select" className="block text-sm font-medium text-gray-400 mb-1">Relación de Aspecto</label>
+                        <select
+                            id="ratio-select"
+                            value={aspectRatio}
+                            onChange={(e) => setAspectRatio(e.target.value as '1:1' | '4:3' | '16:9')}
+                            disabled={isLoading}
+                            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                            <option value="1:1">Cuadrado (1:1)</option>
+                            <option value="4:3">Paisaje (4:3)</option>
+                            <option value="16:9">Panorámico (16:9)</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+
             {(error || successMessage) && (
                 <div className="mt-4 text-center text-sm transition-opacity duration-300">
                     {error && <p className="text-red-400">{error}</p>}
                     {successMessage && <p className="text-green-400">{successMessage}</p>}
                 </div>
             )}
+             <style jsx>{`
+                details[open] .animate-fade-in {
+                    animation: fadeIn 0.5s ease-in-out;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .accent-purple-500 {
+                    accent-color: #8b5cf6;
+                }
+            `}</style>
         </div>
     );
 };

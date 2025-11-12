@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { ProductData } from '../types';
 import { SparklesIcon } from './icons/SparklesIcon';
+import { ClipboardIcon } from './icons/ClipboardIcon';
 
 interface ProductCardProps {
     data: ProductData;
@@ -45,6 +46,7 @@ const ImageContainer: React.FC<{imageUrl: string, isLoading: boolean, productNam
 
 
 export const ProductCard: React.FC<ProductCardProps> = ({ data, imageUrl, imageUrl2, areImagesLoading, onSave, isSaving, saveError, saveSuccess, onReset }) => {
+    const [copySuccess, setCopySuccess] = useState(false);
     
     const formatCurrency = (amount: number, currencyCode: string) => {
         const locale = currencyCode === 'PYG' ? 'es-PY' : 'en-US';
@@ -53,6 +55,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ data, imageUrl, imageU
             currency: currencyCode,
             minimumFractionDigits: currencyCode === 'PYG' ? 0 : 2,
         }).format(amount);
+    };
+
+    const handleCopyHtml = () => {
+        navigator.clipboard.writeText(data.description).then(() => {
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        }).catch(err => {
+            console.error('Failed to copy HTML: ', err);
+        });
     };
 
     const renderFooterContent = () => {
@@ -119,10 +130,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({ data, imageUrl, imageU
                         {formatCurrency(data.price, data.currency)}
                     </p>
 
-                    <div
-                        className="text-gray-300 mb-6 prose prose-invert prose-headings:text-white prose-p:my-2 prose-h3:text-2xl prose-h4:text-xl prose-strong:text-white prose-ul:list-none prose-ul:p-0 prose-li:p-0"
-                        dangerouslySetInnerHTML={{ __html: data.description }}
-                    />
+                    <div className="relative">
+                         <button 
+                            onClick={handleCopyHtml}
+                            className="absolute top-0 right-0 p-1.5 bg-gray-700/50 rounded-lg text-gray-400 hover:text-white hover:bg-gray-600 transition-colors z-10"
+                            aria-label="Copiar descripción HTML"
+                        >
+                            {copySuccess ? 
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg> : 
+                                <ClipboardIcon className="w-5 h-5" />
+                            }
+                        </button>
+                        <div
+                            className="text-gray-300 mb-6 prose prose-invert prose-headings:text-white prose-p:my-2 prose-h3:text-2xl prose-h4:text-xl prose-strong:text-white prose-ul:list-disc prose-ul:pl-6 prose-li:p-0"
+                            dangerouslySetInnerHTML={{ __html: data.description }}
+                        />
+                    </div>
                     
                     <div className="mb-6">
                          <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Meta Description (SEO)</h4>
