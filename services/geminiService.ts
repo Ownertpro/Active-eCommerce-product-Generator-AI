@@ -4,15 +4,17 @@ import type { ProductData } from '../types';
 
 /**
  * Creates a new GoogleGenAI instance.
- * This function is called before each API request to ensure the most up-to-date
- * API key from the environment is used, especially after the user selects a new key.
+ * It uses the provided API key, or falls back to the one in the environment.
+ * This allows for both user-provided keys and keys from the AI Studio environment.
+ * @param apiKey An optional API key string.
  * @returns A GoogleGenAI client instance.
  */
-const getAiClient = () => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set");
+const getAiClient = (apiKey?: string | null) => {
+    const key = apiKey || process.env.API_KEY;
+    if (!key) {
+        throw new Error("API key not found. Please provide an API key in the settings or select one via Google AI Studio.");
     }
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    return new GoogleGenAI({ apiKey: key });
 };
 
 const productSchema = {
@@ -64,9 +66,9 @@ const productSchema = {
     required: ["productName", "description", "metaDescription", "tags", "price", "currency", "imagePrompt", "imagePrompt2"]
 };
 
-export const generateProductDetails = async (productName: string, language: 'es' | 'en'): Promise<ProductData> => {
+export const generateProductDetails = async (productName: string, language: 'es' | 'en', apiKey?: string | null): Promise<ProductData> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(apiKey);
 
         const languageConfig = {
             es: {
@@ -115,9 +117,9 @@ export const generateProductDetails = async (productName: string, language: 'es'
     }
 };
 
-export const generateProductImage = async (prompt: string): Promise<string> => {
+export const generateProductImage = async (prompt: string, apiKey?: string | null): Promise<string> => {
     try {
-        const ai = getAiClient();
+        const ai = getAiClient(apiKey);
         const response = await ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
             prompt: prompt,

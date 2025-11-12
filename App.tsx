@@ -7,6 +7,8 @@ import { SparklesIcon } from './components/icons/SparklesIcon';
 import { generateProductDetails, generateProductImage } from './services/geminiService';
 import type { ProductData, ApiResponse } from './types';
 import { ApiGuide } from './components/ApiGuide';
+import { SettingsModal } from './components/SettingsModal';
+import { SettingsIcon } from './components/icons/SettingsIcon';
 
 // FIX: Resolved conflicting global type declarations for `window.aistudio` by using a named interface `AIStudio`.
 // This allows TypeScript to merge declarations from different sources correctly.
@@ -73,20 +75,30 @@ const compressImage = (base64Str: string, quality = 0.85): Promise<string> => {
 /**
  * A screen that prompts the user to select their API key before using the app.
  */
-const ApiKeySelectionScreen: React.FC<{ onSelectKey: () => void }> = ({ onSelectKey }) => (
+const ApiKeySelectionScreen: React.FC<{ onSelectKey: () => void; onOpenSettings: () => void }> = ({ onSelectKey, onOpenSettings }) => (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 text-center font-sans">
         <div className="w-full max-w-md bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl border border-gray-700 shadow-lg">
              <SparklesIcon className="w-12 h-12 mx-auto text-purple-400 mb-4" />
             <h1 className="text-2xl font-bold text-white mb-2">Se requiere una Clave de API</h1>
             <p className="text-gray-400 mb-6">
-                Para usar esta aplicación, por favor seleccione su propia clave de API de Google AI Studio.
+                 Para usar esta aplicación, por favor seleccione una clave de API de Google AI Studio o ingrese una manualmente.
             </p>
-            <button
-                onClick={onSelectKey}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500"
-            >
-                Seleccionar Clave de API
-            </button>
+            <div className="space-y-4">
+                 {window.aistudio && (
+                    <button
+                        onClick={onSelectKey}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-purple-500"
+                    >
+                        Usar Clave de Google AI Studio
+                    </button>
+                )}
+                 <button
+                    onClick={onOpenSettings}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-gray-500"
+                >
+                    Ingresar Clave Manualmente
+                </button>
+            </div>
             <p className="text-xs text-gray-500 mt-4">
                 Asegúrese de que su clave tenga la facturación habilitada. Para más información, visite la{' '}
                 <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
@@ -116,11 +128,25 @@ export const App: React.FC = () => {
 
     const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
     const [showApiGuide, setShowApiGuide] = useState<boolean>(false);
+
+    const [userApiKey, setUserApiKey] = useState<string>('');
+    const [apiUrl, setApiUrl] = useState<string>('https://compraspar.com/save-product.php');
+    const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     
-    // On component mount, check if an API key has already been selected.
+    // On component mount, check for keys
     useEffect(() => {
+        const localApiKey = localStorage.getItem('gemini_api_key');
+        const localApiUrl = localStorage.getItem('product_api_url');
+        
+        if (localApiUrl) {
+            setApiUrl(localApiUrl);
+        }
+
         const checkApiKey = async () => {
-            if (window.aistudio) {
+            if (localApiKey) {
+                setUserApiKey(localApiKey);
+                setApiKeyReady(true);
+            } else if (window.aistudio) {
                 const hasKey = await window.aistudio.hasSelectedApiKey();
                 setApiKeyReady(hasKey);
             }
@@ -135,6 +161,17 @@ export const App: React.FC = () => {
             setApiKeyReady(true);
             setError(null); // Clear previous errors after selecting a new key
         }
+    };
+
+    const handleSaveSettings = (newApiKey: string, newApiUrl: string) => {
+        localStorage.setItem('gemini_api_key', newApiKey);
+        localStorage.setItem('product_api_url', newApiUrl);
+        setUserApiKey(newApiKey);
+        setApiUrl(newApiUrl);
+        if (newApiKey) {
+            setApiKeyReady(true);
+        }
+        setError(null);
     };
 
     const handleProductNameChange = (name: string) => {
@@ -161,13 +198,13 @@ export const App: React.FC = () => {
 
         try {
             // Generate text details first
-            const details = await generateProductDetails(productName, language);
+            const details = await generateProductDetails(productName, language, userApiKey);
             setGeneratedData(details);
 
             // Generate images in parallel
             const [image1Result, image2Result] = await Promise.allSettled([
-                details.imagePrompt ? generateProductImage(details.imagePrompt) : Promise.reject(new Error('No se generó prompt para la imagen 1')),
-                details.imagePrompt2 ? generateProductImage(details.imagePrompt2) : Promise.reject(new Error('No se generó prompt para la imagen 2'))
+                details.imagePrompt ? generateProductImage(details.imagePrompt, userApiKey) : Promise.reject(new Error('No se generó prompt para la imagen 1')),
+                details.imagePrompt2 ? generateProductImage(details.imagePrompt2, userApiKey) : Promise.reject(new Error('No se generó prompt para la imagen 2'))
             ]);
 
             if (image1Result.status === 'fulfilled') {
@@ -190,8 +227,8 @@ export const App: React.FC = () => {
             console.error(e);
             const errorMessage = e.message || 'Ocurrió un error al generar los datos. Por favor, intente de nuevo.';
              // If permission is denied, prompt the user to select an API key again.
-            if (e.toString().includes('PERMISSION_DENIED') || e.toString().includes('API key not valid')) {
-                setError('Error de permiso. Por favor, seleccione una clave de API válida y habilitada.');
+            if (e.toString().includes('PERMISSION_DENIED') || e.toString().includes('API key not valid') || e.message.includes('API key not found')) {
+                setError('Error de permiso o clave de API inválida. Por favor, verifique su clave en la configuración o seleccione una nueva clave de AI Studio.');
                 setApiKeyReady(false);
             } else {
                 setError(errorMessage);
@@ -200,7 +237,7 @@ export const App: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [productName, language]);
+    }, [productName, language, userApiKey]);
 
     const handleSaveToDatabase = useCallback(async () => {
         if (!generatedData || (!imageUrl && !imageUrl2)) {
@@ -227,7 +264,7 @@ export const App: React.FC = () => {
         };
 
         try {
-            const response = await fetch('https://compraspar.com/save-product.php', {
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -266,7 +303,7 @@ export const App: React.FC = () => {
             console.error("Error saving product:", e);
             let errorMessage = "Ocurrió un error desconocido al guardar.";
             if (e instanceof TypeError && e.message === 'Failed to fetch') {
-                errorMessage = "Error de red o CORS. Asegúrese de que el servidor en 'compraspar.com' esté configurado para aceptar peticiones desde este origen.";
+                errorMessage = "Error de red o CORS. Asegúrese de que el servidor esté configurado para aceptar peticiones desde este origen.";
             } else if (e.message) {
                 errorMessage = e.message;
             }
@@ -274,7 +311,7 @@ export const App: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
-    }, [generatedData, imageUrl, imageUrl2, categoryId, stockQuantity]);
+    }, [generatedData, imageUrl, imageUrl2, categoryId, stockQuantity, apiUrl]);
 
     const handleReset = useCallback(() => {
         setProductName('');
@@ -292,14 +329,50 @@ export const App: React.FC = () => {
 
     // If the API key is not ready, show the selection screen.
     if (!apiKeyReady) {
-        return <ApiKeySelectionScreen onSelectKey={handleSelectKey} />;
+        return (
+            <>
+                <ApiKeySelectionScreen 
+                    onSelectKey={handleSelectKey} 
+                    onOpenSettings={() => setIsSettingsOpen(true)} 
+                />
+                 <SettingsModal 
+                    isOpen={isSettingsOpen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    onSave={handleSaveSettings}
+                    onShowApiGuide={() => {
+                        setIsSettingsOpen(false);
+                        setShowApiGuide(true);
+                    }}
+                    initialApiKey={userApiKey}
+                    initialApiUrl={apiUrl}
+                />
+            </>
+        );
     }
 
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans">
+            <SettingsModal 
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                onSave={handleSaveSettings}
+                onShowApiGuide={() => {
+                    setIsSettingsOpen(false);
+                    setShowApiGuide(true);
+                }}
+                initialApiKey={userApiKey}
+                initialApiUrl={apiUrl}
+            />
             {showApiGuide && <ApiGuide onClose={() => setShowApiGuide(false)} />}
             <div className="w-full max-w-4xl mx-auto">
                 <header className="relative text-center mb-8">
+                     <button 
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="absolute top-0 right-0 p-2 text-gray-400 hover:text-white transition-colors"
+                        aria-label="Configuración"
+                    >
+                        <SettingsIcon className="w-6 h-6" />
+                    </button>
                     <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 flex items-center justify-center gap-3">
                         <SparklesIcon className="w-8 h-8 sm:w-10 sm:h-10" />
                         Generador de Productos
