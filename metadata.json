@@ -1,0 +1,5 @@
+{
+  "name": "Generador de Productos con IA",
+  "description": "Una aplicación que utiliza la IA de Gemini para generar descripciones, características, precios e imágenes de productos en español, con un enfoque en el mercado de Paraguay.",
+  "requestFramePermissions": []
+}
