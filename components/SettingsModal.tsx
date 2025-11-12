@@ -5,26 +5,30 @@ import { validateApiKey } from '../services/geminiService';
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (apiKey: string, apiUrl: string) => void;
+    onSave: (apiKey: string, apiUrl: string, categoriesApiUrl: string) => void;
     onShowApiGuide: () => void;
+    onShowCategoriesApiGuide: () => void;
     initialApiKey: string;
     initialApiUrl: string;
+    initialCategoriesApiUrl: string;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
-    isOpen, onClose, onSave, onShowApiGuide, initialApiKey, initialApiUrl 
+    isOpen, onClose, onSave, onShowApiGuide, onShowCategoriesApiGuide, initialApiKey, initialApiUrl, initialCategoriesApiUrl
 }) => {
     const [apiKey, setApiKey] = useState(initialApiKey);
     const [apiUrl, setApiUrl] = useState(initialApiUrl);
+    const [categoriesApiUrl, setCategoriesApiUrl] = useState(initialCategoriesApiUrl);
     const [isValidating, setIsValidating] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
 
     useEffect(() => {
         setApiKey(initialApiKey);
         setApiUrl(initialApiUrl);
+        setCategoriesApiUrl(initialCategoriesApiUrl);
         setValidationError(null);
         setIsValidating(false);
-    }, [initialApiKey, initialApiUrl, isOpen]);
+    }, [initialApiKey, initialApiUrl, initialCategoriesApiUrl, isOpen]);
 
     if (!isOpen) {
         return null;
@@ -40,26 +44,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const handleSave = async () => {
         setValidationError(null);
 
-        // Si la clave no ha cambiado y ya existía, no es necesario re-validarla.
-        if (apiKey === initialApiKey && apiKey) {
-            onSave(apiKey, apiUrl);
+        if (apiKey === initialApiKey && apiKey && apiUrl === initialApiUrl && categoriesApiUrl === initialCategoriesApiUrl) {
             onClose();
             return;
         }
 
-        // Si el campo de la clave está vacío, simplemente guarda y permite que la app principal maneje el estado de "clave no lista".
         if (!apiKey.trim()) {
-            onSave('', apiUrl);
+            onSave('', apiUrl, categoriesApiUrl);
             onClose();
             return;
         }
-
+        
         setIsValidating(true);
         const isValid = await validateApiKey(apiKey);
         setIsValidating(false);
 
         if (isValid) {
-            onSave(apiKey, apiUrl);
+            onSave(apiKey, apiUrl, categoriesApiUrl);
             onClose();
         } else {
             setValidationError("La clave de API no es válida o no tiene los permisos necesarios.");
@@ -99,7 +100,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                     <div>
                         <label htmlFor="api-url" className="block text-sm font-medium text-gray-300 mb-2">
-                            URL del Servidor para Guardar
+                            URL del Servidor para Guardar (save-product.php)
                         </label>
                         <input
                             id="api-url"
@@ -110,13 +111,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
                     </div>
-
+                    
                     <div>
+                        <label htmlFor="categories-api-url" className="block text-sm font-medium text-gray-300 mb-2">
+                            URL de la API de Categorías (get-categories.php)
+                        </label>
+                        <input
+                            id="categories-api-url"
+                            type="text"
+                            value={categoriesApiUrl}
+                            onChange={(e) => setCategoriesApiUrl(e.target.value)}
+                            placeholder="https://tudominio.com/get-categories.php"
+                            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                    </div>
+
+                    <div className="flex flex-col space-y-2">
                         <button 
                             onClick={onShowApiGuide}
-                            className="text-purple-400 hover:underline text-sm"
+                            className="text-purple-400 hover:underline text-sm text-left"
                         >
                             Ver / Copiar script del servidor (save-product.php)
+                        </button>
+                        <button 
+                            onClick={onShowCategoriesApiGuide}
+                            className="text-purple-400 hover:underline text-sm text-left"
+                        >
+                            Ver / Copiar script de categorías (get-categories.php)
                         </button>
                     </div>
                 </div>

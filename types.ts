@@ -1,3 +1,4 @@
+
 export interface ProductData {
     productName: string;
     description: string; // Contendrá el HTML formateado
@@ -20,4 +21,11 @@ export interface ApiResponse {
     currency: string;
     imageUrl1: string;
     imageUrl2: string;
+}
+
+export interface Category {
+  id: number;
+  parentId: number;
+  level: number;
+  name: string;
 }

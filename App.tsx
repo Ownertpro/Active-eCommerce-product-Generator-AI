@@ -5,10 +5,11 @@ import { ProductCard } from './components/ProductCard';
 import { Loader } from './components/Loader';
 import { SparklesIcon } from './components/icons/SparklesIcon';
 import { generateProductDetails, generateProductImage } from './services/geminiService';
-import type { ProductData, ApiResponse } from './types';
+import type { ProductData, ApiResponse, Category } from './types';
 import { ApiGuide } from './components/ApiGuide';
 import { SettingsModal } from './components/SettingsModal';
 import { SettingsIcon } from './components/icons/SettingsIcon';
+import { CategoriesApiGuide } from './components/CategoriesApiGuide';
 
 // FIX: Resolved conflicting global type declarations for `window.aistudio` by using a named interface `AIStudio`.
 // This allows TypeScript to merge declarations from different sources correctly.
@@ -23,6 +24,22 @@ declare global {
         aistudio?: AIStudio;
     }
 }
+
+/**
+ * Obtiene el estado inicial de una clave del localStorage o devuelve un valor por defecto.
+ * @param key La clave del localStorage.
+ * @param defaultValue El valor por defecto si la clave no existe o hay un error.
+ * @returns El valor parseado del localStorage o el valor por defecto.
+ */
+const getInitialState = <T,>(key: string, defaultValue: T): T => {
+    try {
+        const item = window.localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn(`Error al leer la clave “${key}” del localStorage:`, error);
+        return defaultValue;
+    }
+};
 
 
 /**
@@ -122,11 +139,11 @@ export const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    // Generation options
-    const [tone, setTone] = useState<string>('persuasive');
-    const [temperature, setTemperature] = useState<number>(0.8);
-    const [imageStyle, setImageStyle] = useState<string>('studio');
-    const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '16:9'>('1:1');
+    // Opciones de generación con persistencia en localStorage
+    const [tone, setTone] = useState<string>(() => getInitialState('gen_tone', 'persuasive'));
+    const [temperature, setTemperature] = useState<number>(() => getInitialState('gen_temperature', 0.8));
+    const [imageStyle, setImageStyle] = useState<string>(() => getInitialState('gen_imageStyle', 'studio'));
+    const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '16:9'>(() => getInitialState('gen_aspectRatio', '1:1'));
 
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [saveError, setSaveError] = useState<string | null>(null);
@@ -134,19 +151,25 @@ export const App: React.FC = () => {
 
     const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
     const [showApiGuide, setShowApiGuide] = useState<boolean>(false);
+    const [showCategoriesApiGuide, setShowCategoriesApiGuide] = useState<boolean>(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
+    // Estado para la configuración de la API y las categorías
     const [userApiKey, setUserApiKey] = useState<string>('');
     const [apiUrl, setApiUrl] = useState<string>('https://compraspar.com/save-product.php');
-    const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+    const [categoriesApiUrl, setCategoriesApiUrl] = useState<string>('https://compraspar.com/get-categories.php');
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(true);
+    const [categoriesError, setCategoriesError] = useState<string | null>(null);
     
-    // On component mount, check for keys
+    // On component mount, check for keys and URLs
     useEffect(() => {
         const localApiKey = localStorage.getItem('gemini_api_key');
         const localApiUrl = localStorage.getItem('product_api_url');
+        const localCategoriesApiUrl = localStorage.getItem('categories_api_url');
         
-        if (localApiUrl) {
-            setApiUrl(localApiUrl);
-        }
+        if (localApiUrl) setApiUrl(localApiUrl);
+        if (localCategoriesApiUrl) setCategoriesApiUrl(localCategoriesApiUrl);
 
         const checkApiKey = async () => {
             if (localApiKey) {
@@ -160,20 +183,85 @@ export const App: React.FC = () => {
         checkApiKey();
     }, []);
 
+    // Fetch categories when the component mounts or the API URL changes
+    useEffect(() => {
+        const fetchCategories = async () => {
+            if (!categoriesApiUrl) {
+                setCategoriesError("Configure la URL de la API de categorías.");
+                setIsCategoriesLoading(false);
+                setCategories([]);
+                return;
+            }
+            setIsCategoriesLoading(true);
+            setCategoriesError(null);
+            setShowCategoriesApiGuide(false);
+            try {
+                const response = await fetch(categoriesApiUrl);
+                
+                if (!response.ok) {
+                    const status = response.status;
+                    // Intenta leer el cuerpo del error para obtener un mensaje más detallado.
+                    try {
+                        const errorData = await response.json();
+                        // Si el script PHP envía un error JSON, lo usamos.
+                        throw new Error(errorData.error || `Error del servidor: ${status}`);
+                    } catch (e) {
+                        // Si el cuerpo no es JSON o hay otro error, usamos el estado HTTP.
+                        throw new Error(`Error del servidor: ${status}`);
+                    }
+                }
+
+                const result = await response.json();
+                if (result.ok && Array.isArray(result.data)) {
+                    setCategories(result.data);
+                } else {
+                    throw new Error(result.error || 'Respuesta inesperada de la API.');
+                }
+            } catch (error: any) {
+                console.error("Error al cargar categorías:", error);
+                 if (error.message.includes('500')) {
+                    setShowCategoriesApiGuide(true);
+                }
+                setCategoriesError(error.message || "No se pudieron cargar las categorías. Verifique la URL.");
+                setCategories([]);
+            } finally {
+                setIsCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, [categoriesApiUrl]);
+
+    // Persistir las opciones de generación en localStorage cuando cambien
+    useEffect(() => {
+        try {
+            localStorage.setItem('gen_tone', JSON.stringify(tone));
+            localStorage.setItem('gen_temperature', JSON.stringify(temperature));
+            localStorage.setItem('gen_imageStyle', JSON.stringify(imageStyle));
+            localStorage.setItem('gen_aspectRatio', JSON.stringify(aspectRatio));
+        } catch (error) {
+            console.error("No se pudieron guardar las configuraciones en localStorage", error);
+        }
+    }, [tone, temperature, imageStyle, aspectRatio]);
+
+
     const handleSelectKey = async () => {
         if (window.aistudio) {
             await window.aistudio.openSelectKey();
-            // Assume success to handle potential race condition where hasSelectedApiKey is not immediately true.
             setApiKeyReady(true);
-            setError(null); // Clear previous errors after selecting a new key
+            setError(null);
         }
     };
 
-    const handleSaveSettings = (newApiKey: string, newApiUrl: string) => {
+    const handleSaveSettings = (newApiKey: string, newApiUrl: string, newCategoriesApiUrl: string) => {
         localStorage.setItem('gemini_api_key', newApiKey);
         localStorage.setItem('product_api_url', newApiUrl);
+        localStorage.setItem('categories_api_url', newCategoriesApiUrl);
+        
         setUserApiKey(newApiKey);
         setApiUrl(newApiUrl);
+        setCategoriesApiUrl(newCategoriesApiUrl);
+
         if (newApiKey) {
             setApiKeyReady(true);
         }
@@ -201,13 +289,12 @@ export const App: React.FC = () => {
         setSaveError(null);
         setSaveSuccess(null);
         setShowApiGuide(false);
+        setShowCategoriesApiGuide(false);
 
         try {
-            // Generate text details first
             const details = await generateProductDetails(productName, language, userApiKey, tone, temperature);
             setGeneratedData(details);
 
-            // Generate images in parallel
             const [image1Result, image2Result] = await Promise.allSettled([
                 details.imagePrompt ? generateProductImage(details.imagePrompt, userApiKey, imageStyle, aspectRatio) : Promise.reject(new Error('No se generó prompt para la imagen 1')),
                 details.imagePrompt2 ? generateProductImage(details.imagePrompt2, userApiKey, imageStyle, aspectRatio) : Promise.reject(new Error('No se generó prompt para la imagen 2'))
@@ -217,7 +304,7 @@ export const App: React.FC = () => {
                 const compressedUrl = await compressImage(image1Result.value);
                 setImageUrl(compressedUrl);
             } else {
-                console.error("Error generando imagen 1:", image1Result.reason);
+                throw image1Result.reason;
             }
 
             if (image2Result.status === 'fulfilled') {
@@ -231,15 +318,25 @@ export const App: React.FC = () => {
 
         } catch (e: any) {
             console.error(e);
-            const errorMessage = e.message || 'Ocurrió un error al generar los datos. Por favor, intente de nuevo.';
-             // If permission is denied, prompt the user to select an API key again.
-            if (e.toString().includes('PERMISSION_DENIED') || e.toString().includes('API key not valid') || e.message.includes('API key not found')) {
-                setError('Error de permiso o clave de API inválida. Por favor, verifique su clave en la configuración o seleccione una nueva clave de AI Studio.');
+            const errorMessage = e.message || 'Ocurrió un error al generar los datos.';
+            
+            const isApiKeyError = 
+                e.toString().includes('PERMISSION_DENIED') ||
+                e.toString().includes('API key not valid') ||
+                e.message.includes('API key not found') ||
+                e.message.includes('Error de cuota de API');
+
+            if (isApiKeyError) {
+                let specificError = 'Error de permiso o clave de API inválida. Verifique su clave.';
+                if (e.message.includes('Error de cuota de API')) {
+                    specificError = 'Error de cuota (429). Verifique la facturación de su clave en Google AI Studio.';
+                }
+                setError(specificError);
                 setApiKeyReady(false);
+                setGeneratedData(null);
             } else {
                 setError(errorMessage);
             }
-            setGeneratedData(null);
         } finally {
             setIsLoading(false);
         }
@@ -272,9 +369,7 @@ export const App: React.FC = () => {
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
 
@@ -290,7 +385,7 @@ export const App: React.FC = () => {
                 let errorMessage = `Error del servidor (${response.status}).`;
                 try {
                     const errorJson = JSON.parse(responseText);
-                    errorMessage = errorJson.error || `Respuesta inesperada del servidor: ${responseText}`;
+                    errorMessage = errorJson.error || `Respuesta inesperada: ${responseText}`;
                 } catch (jsonError) {
                     errorMessage = `Error del servidor (${response.status}): ${responseText}`;
                 }
@@ -309,7 +404,7 @@ export const App: React.FC = () => {
             console.error("Error saving product:", e);
             let errorMessage = "Ocurrió un error desconocido al guardar.";
             if (e instanceof TypeError && e.message === 'Failed to fetch') {
-                errorMessage = "Error de red o CORS. Asegúrese de que el servidor esté configurado para aceptar peticiones desde este origen.";
+                errorMessage = "Error de red o CORS. Asegúrese de que el servidor esté configurado correctamente.";
             } else if (e.message) {
                 errorMessage = e.message;
             }
@@ -343,10 +438,16 @@ export const App: React.FC = () => {
                     setIsSettingsOpen(false);
                     setShowApiGuide(true);
                 }}
+                 onShowCategoriesApiGuide={() => {
+                    setIsSettingsOpen(false);
+                    setShowCategoriesApiGuide(true);
+                }}
                 initialApiKey={userApiKey}
                 initialApiUrl={apiUrl}
+                initialCategoriesApiUrl={categoriesApiUrl}
             />
             {showApiGuide && <ApiGuide onClose={() => setShowApiGuide(false)} />}
+            {showCategoriesApiGuide && <CategoriesApiGuide onClose={() => setShowCategoriesApiGuide(false)} />}
             
             {!apiKeyReady ? (
                 <ApiKeySelectionScreen 
@@ -395,6 +496,9 @@ export const App: React.FC = () => {
                                 setImageStyle={setImageStyle}
                                 aspectRatio={aspectRatio}
                                 setAspectRatio={setAspectRatio}
+                                categories={categories}
+                                isCategoriesLoading={isCategoriesLoading}
+                                categoriesError={categoriesError}
                             />
 
                             {isLoading && !generatedData && <Loader />}

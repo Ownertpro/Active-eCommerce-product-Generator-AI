@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { SparklesIcon } from './icons/SparklesIcon';
-import { categories } from '../data/categories';
+import type { Category } from '../types';
 
 interface ProductInputProps {
     productName: string;
@@ -24,12 +24,16 @@ interface ProductInputProps {
     setImageStyle: (style: string) => void;
     aspectRatio: '1:1' | '4:3' | '16:9';
     setAspectRatio: (ratio: '1:1' | '4:3' | '16:9') => void;
+    categories: Category[];
+    isCategoriesLoading: boolean;
+    categoriesError: string | null;
 }
 
 export const ProductInput: React.FC<ProductInputProps> = ({ 
     productName, setProductName, onGenerate, isLoading, error, successMessage, 
     language, setLanguage, categoryId, setCategoryId, stockQuantity, setStockQuantity,
-    tone, setTone, temperature, setTemperature, imageStyle, setImageStyle, aspectRatio, setAspectRatio
+    tone, setTone, temperature, setTemperature, imageStyle, setImageStyle, aspectRatio, setAspectRatio,
+    categories, isCategoriesLoading, categoriesError
 }) => {
     
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -69,15 +73,19 @@ export const ProductInput: React.FC<ProductInputProps> = ({
                             id="category-select"
                             value={categoryId}
                             onChange={(e) => setCategoryId(Number(e.target.value))}
-                            disabled={isLoading}
-                            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
+                            disabled={isLoading || isCategoriesLoading || !!categoriesError}
+                            className={`w-full bg-gray-900 border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 transition-all duration-300 ${categoriesError ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-purple-500'}`}
+                            aria-invalid={!!categoriesError}
+                            aria-describedby="category-error"
                         >
-                            {categories.map(cat => (
+                            {isCategoriesLoading && <option>Cargando categorías...</option>}
+                            {!isCategoriesLoading && !categoriesError && categories.map(cat => (
                                 <option key={cat.id} value={cat.id}>
                                     {'\u00A0'.repeat(cat.level * 4)}{cat.name}
                                 </option>
                             ))}
                         </select>
+                        {categoriesError && <p id="category-error" className="text-red-400 text-xs mt-1">{categoriesError}</p>}
                     </div>
                     <div>
                         <label htmlFor="stock-quantity" className="block text-sm font-medium text-gray-400 mb-1">Stock</label>
