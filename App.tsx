@@ -92,9 +92,23 @@ const compressImage = (base64Str: string, quality = 0.85): Promise<string> => {
 /**
  * A screen that prompts the user to select their API key before using the app.
  */
-const ApiKeySelectionScreen: React.FC<{ onSelectKey: () => void; onOpenSettings: () => void }> = ({ onSelectKey, onOpenSettings }) => (
+const ApiKeySelectionScreen: React.FC<{ 
+    onSelectKey: () => void; 
+    onOpenSettings: () => void;
+    error?: string | null;
+    onDismissError: () => void;
+}> = ({ onSelectKey, onOpenSettings, error, onDismissError }) => (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 text-center font-sans">
         <div className="w-full max-w-md bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl border border-gray-700 shadow-lg">
+            {error && (
+                <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg relative mb-6 text-left" role="alert">
+                    <strong className="font-bold block mb-1">Error de API</strong>
+                    <span className="block">{error}</span>
+                    <button onClick={onDismissError} className="absolute top-0.5 right-0.5 p-2" aria-label="Cerrar">
+                        <svg className="fill-current h-5 w-5 text-red-400" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Cerrar</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+                    </button>
+                </div>
+            )}
              <SparklesIcon className="w-12 h-12 mx-auto text-purple-400 mb-4" />
             <h1 className="text-2xl font-bold text-white mb-2">Se requiere una Clave de API</h1>
             <p className="text-gray-400 mb-6">
@@ -247,10 +261,15 @@ export const App: React.FC = () => {
 
     const handleSelectKey = async () => {
         if (window.aistudio) {
+            setError(null);
             await window.aistudio.openSelectKey();
             setApiKeyReady(true);
-            setError(null);
         }
+    };
+    
+    const handleOpenSettings = () => {
+        setError(null);
+        setIsSettingsOpen(true);
     };
 
     const handleSaveSettings = (newApiKey: string, newApiUrl: string, newCategoriesApiUrl: string) => {
@@ -452,7 +471,9 @@ export const App: React.FC = () => {
             {!apiKeyReady ? (
                 <ApiKeySelectionScreen 
                     onSelectKey={handleSelectKey} 
-                    onOpenSettings={() => setIsSettingsOpen(true)} 
+                    onOpenSettings={handleOpenSettings}
+                    error={error}
+                    onDismissError={() => setError(null)}
                 />
             ) : (
                 <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-4 sm:p-6 lg:p-8 font-sans">
