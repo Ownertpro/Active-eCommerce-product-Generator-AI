@@ -5,7 +5,7 @@ import { CodeIcon } from './icons/CodeIcon';
 const phpCode = `
 <?php
 // ===============================================================
-// 💾 API PARA GUARDAR PRODUCTOS (Compatible con ComprasPar)
+// 💾 By Paul Sanabria API PARA GUARDAR PRODUCTOS (Compatible con ComprasPar)
 // v9.0 - Ajustada la ruta de guardado en la base de datos para las imágenes.
 // ===============================================================
 
