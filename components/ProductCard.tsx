@@ -3,12 +3,16 @@ import React, { useState } from 'react';
 import type { ProductData } from '../types';
 import { SparklesIcon } from './icons/SparklesIcon';
 import { ClipboardIcon } from './icons/ClipboardIcon';
+import { InteractiveImage } from './InteractiveImage';
 
 interface ProductCardProps {
     data: ProductData;
     imageUrl: string;
     imageUrl2: string;
-    areImagesLoading: boolean;
+    isImage1Loading: boolean;
+    isImage2Loading: boolean;
+    onRegenerateImage: (imageNumber: 1 | 2) => void;
+    onDeleteImage: (imageNumber: 1 | 2) => void;
     onSave: () => void;
     isSaving: boolean;
     saveError: string | null;
@@ -16,36 +20,20 @@ interface ProductCardProps {
     onReset: () => void;
 }
 
-const ImageContainer: React.FC<{imageUrl: string, isLoading: boolean, productName: string}> = ({imageUrl, isLoading, productName}) => {
-    const loader = (
-        <div className="flex flex-col items-center justify-center text-gray-500 w-full h-full">
-            <svg className="animate-spin h-8 w-8 text-white mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Cargando...
-        </div>
-    );
-
-    const placeholder = (
-        <div className="flex items-center justify-center w-full h-full text-gray-500">
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-        </div>
-    );
-
-    if (imageUrl) {
-        return <img src={imageUrl} alt={productName} className="object-contain w-full h-full max-h-48 rounded-lg" />;
-    }
-    if (isLoading) {
-        return loader;
-    }
-    return placeholder;
-}
-
-
-export const ProductCard: React.FC<ProductCardProps> = ({ data, imageUrl, imageUrl2, areImagesLoading, onSave, isSaving, saveError, saveSuccess, onReset }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ 
+    data, 
+    imageUrl, 
+    imageUrl2, 
+    isImage1Loading, 
+    isImage2Loading, 
+    onRegenerateImage, 
+    onDeleteImage, 
+    onSave, 
+    isSaving, 
+    saveError, 
+    saveSuccess, 
+    onReset 
+}) => {
     const [copySuccess, setCopySuccess] = useState(false);
     
     const formatCurrency = (amount: number, currencyCode: string) => {
@@ -165,20 +153,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({ data, imageUrl, imageU
                 </div>
                 <div className="bg-gray-900 flex items-center justify-center p-6 min-h-[300px] md:min-h-0">
                     <div className="grid grid-cols-2 gap-4 w-full h-full">
-                        <div className="flex items-center justify-center bg-gray-800 rounded-lg p-2 aspect-square">
-                           <ImageContainer 
-                                imageUrl={imageUrl} 
-                                isLoading={areImagesLoading && !imageUrl} 
-                                productName={data.productName} 
-                            />
-                        </div>
-                         <div className="flex items-center justify-center bg-gray-800 rounded-lg p-2 aspect-square">
-                           <ImageContainer 
-                                imageUrl={imageUrl2} 
-                                isLoading={areImagesLoading && !imageUrl2} 
-                                productName={`${data.productName} - vista alternativa`} 
-                            />
-                        </div>
+                        <InteractiveImage
+                            imageUrl={imageUrl}
+                            isLoading={isImage1Loading}
+                            productName={data.productName}
+                            onRegenerate={() => onRegenerateImage(1)}
+                            onDelete={() => onDeleteImage(1)}
+                        />
+                        <InteractiveImage
+                            imageUrl={imageUrl2}
+                            isLoading={isImage2Loading}
+                            productName={`${data.productName} - vista alternativa`}
+                            onRegenerate={() => onRegenerateImage(2)}
+                            onDelete={() => onDeleteImage(2)}
+                        />
                     </div>
                 </div>
             </div>

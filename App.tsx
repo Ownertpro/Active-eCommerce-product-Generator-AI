@@ -149,7 +149,9 @@ export const App: React.FC = () => {
     const [generatedData, setGeneratedData] = useState<ProductData | null>(null);
     const [imageUrl, setImageUrl] = useState<string>('');
     const [imageUrl2, setImageUrl2] = useState<string>('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isGeneratingDetails, setIsGeneratingDetails] = useState<boolean>(false);
+    const [isImage1Loading, setIsImage1Loading] = useState<boolean>(false);
+    const [isImage2Loading, setIsImage2Loading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -299,7 +301,7 @@ export const App: React.FC = () => {
             return;
         }
 
-        setIsLoading(true);
+        setIsGeneratingDetails(true);
         setError(null);
         setSuccessMessage(null);
         setGeneratedData(null);
@@ -308,32 +310,35 @@ export const App: React.FC = () => {
         setSaveError(null);
         setSaveSuccess(null);
         setShowApiGuide(false);
-        setShowCategoriesApiGuide(false);
 
         try {
             const details = await generateProductDetails(productName, language, userApiKey, tone, temperature);
             setGeneratedData(details);
+            setSuccessMessage('¡Detalles generados! Ahora generando imágenes...');
 
-            const [image1Result, image2Result] = await Promise.allSettled([
-                details.imagePrompt ? generateProductImage(details.imagePrompt, userApiKey, imageStyle, aspectRatio) : Promise.reject(new Error('No se generó prompt para la imagen 1')),
-                details.imagePrompt2 ? generateProductImage(details.imagePrompt2, userApiKey, imageStyle, aspectRatio) : Promise.reject(new Error('No se generó prompt para la imagen 2'))
-            ]);
-
-            if (image1Result.status === 'fulfilled') {
-                const compressedUrl = await compressImage(image1Result.value);
-                setImageUrl(compressedUrl);
-            } else {
-                throw image1Result.reason;
+            if (details.imagePrompt) {
+                setIsImage1Loading(true);
+                generateProductImage(details.imagePrompt, userApiKey, imageStyle, aspectRatio)
+                    .then(compressImage)
+                    .then(setImageUrl)
+                    .catch(e => {
+                        console.error("Error generating image 1:", e);
+                        setError(prev => prev ? `${prev}\nError Imagen 1: ${e.message}` : `Error Imagen 1: ${e.message}`);
+                    })
+                    .finally(() => setIsImage1Loading(false));
             }
 
-            if (image2Result.status === 'fulfilled') {
-                const compressedUrl = await compressImage(image2Result.value);
-                setImageUrl2(compressedUrl);
-            } else {
-                console.error("Error generando imagen 2:", image2Result.reason);
+            if (details.imagePrompt2) {
+                setIsImage2Loading(true);
+                generateProductImage(details.imagePrompt2, userApiKey, imageStyle, aspectRatio)
+                    .then(compressImage)
+                    .then(setImageUrl2)
+                    .catch(e => {
+                        console.error("Error generating image 2:", e);
+                        setError(prev => prev ? `${prev}\nError Imagen 2: ${e.message}` : `Error Imagen 2: ${e.message}`);
+                    })
+                    .finally(() => setIsImage2Loading(false));
             }
-
-            setSuccessMessage('¡Producto generado con éxito!');
 
         } catch (e: any) {
             console.error(e);
@@ -352,14 +357,50 @@ export const App: React.FC = () => {
                 }
                 setError(specificError);
                 setApiKeyReady(false);
-                setGeneratedData(null);
             } else {
                 setError(errorMessage);
             }
         } finally {
-            setIsLoading(false);
+            setIsGeneratingDetails(false);
         }
     }, [productName, language, userApiKey, tone, temperature, imageStyle, aspectRatio]);
+
+    const handleRegenerateImage = useCallback(async (imageNumber: 1 | 2) => {
+        if (!generatedData) return;
+
+        const prompt = imageNumber === 1 ? generatedData.imagePrompt : generatedData.imagePrompt2;
+        if (!prompt) {
+            setError(`No hay prompt para la imagen ${imageNumber}.`);
+            return;
+        }
+
+        const setLoading = imageNumber === 1 ? setIsImage1Loading : setIsImage2Loading;
+        const setUrl = imageNumber === 1 ? setImageUrl : setImageUrl2;
+        
+        setLoading(true);
+        setError(null);
+        setSaveSuccess(null);
+        setSaveError(null);
+        
+        try {
+            const result = await generateProductImage(prompt, userApiKey, imageStyle, aspectRatio);
+            const compressedUrl = await compressImage(result);
+            setUrl(compressedUrl);
+        } catch (e: any) {
+            console.error(`Error regenerating image ${imageNumber}:`, e);
+            setError(`Error al regenerar imagen ${imageNumber}: ${e.message}`);
+        } finally {
+            setLoading(false);
+        }
+    }, [generatedData, userApiKey, imageStyle, aspectRatio]);
+
+    const handleDeleteImage = useCallback((imageNumber: 1 | 2) => {
+        if (imageNumber === 1) {
+            setImageUrl('');
+        } else {
+            setImageUrl2('');
+        }
+    }, []);
 
     const handleSaveToDatabase = useCallback(async () => {
         if (!generatedData || (!imageUrl && !imageUrl2)) {
@@ -443,9 +484,13 @@ export const App: React.FC = () => {
         setSaveError(null);
         setSaveSuccess(null);
         setIsSaving(false);
-        setIsLoading(false);
+        setIsGeneratingDetails(false);
+        setIsImage1Loading(false);
+        setIsImage2Loading(false);
         setShowApiGuide(false);
     }, []);
+    
+    const isAnythingLoading = isGeneratingDetails || isImage1Loading || isImage2Loading;
 
     return (
         <>
@@ -500,7 +545,7 @@ export const App: React.FC = () => {
                                 productName={productName}
                                 setProductName={handleProductNameChange}
                                 onGenerate={handleGenerate}
-                                isLoading={isLoading}
+                                isLoading={isAnythingLoading}
                                 error={error}
                                 successMessage={successMessage}
                                 language={language}
@@ -522,9 +567,9 @@ export const App: React.FC = () => {
                                 categoriesError={categoriesError}
                             />
 
-                            {isLoading && !generatedData && <Loader />}
+                            {isGeneratingDetails && <Loader />}
 
-                            {!isLoading && !generatedData && !error && (
+                            {!isGeneratingDetails && !generatedData && !error && (
                                 <div className="text-center text-gray-500 py-10">
                                     <p>Ingrese el nombre de un producto para comenzar.</p>
                                 </div>
@@ -535,7 +580,10 @@ export const App: React.FC = () => {
                                     data={generatedData}
                                     imageUrl={imageUrl}
                                     imageUrl2={imageUrl2}
-                                    areImagesLoading={isLoading}
+                                    isImage1Loading={isImage1Loading}
+                                    isImage2Loading={isImage2Loading}
+                                    onRegenerateImage={handleRegenerateImage}
+                                    onDeleteImage={handleDeleteImage}
                                     onSave={handleSaveToDatabase}
                                     isSaving={isSaving}
                                     saveError={saveError}

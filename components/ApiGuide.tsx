@@ -6,7 +6,7 @@ const phpCode = `
 <?php
 // ===============================================================
 // 💾 API PARA GUARDAR PRODUCTOS (Compatible con ComprasPar)
-// v8.7 - Se añade la inserción en la tabla 'product_stocks' para una correcta gestión del inventario.
+// v9.0 - Ajustada la ruta de guardado en la base de datos para las imágenes.
 // ===============================================================
 
 // --- Cabeceras CORS ---
@@ -34,7 +34,7 @@ define('DB_NAME', 'tu_nombre_de_base_de_datos'); // <-- REEMPLAZAR
 
 // --- CONFIGURACIÓN DE RUTAS DE IMAGEN ---
 define('SERVER_UPLOAD_DIR', rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/public/uploads/all/');
-define('DB_UPLOAD_PATH', 'public/uploads/all/');
+define('DB_UPLOAD_PATH', 'uploads/all/');
 // -------------------------------------------------------------------------
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -139,7 +139,7 @@ try {
  * @return int El ID del nuevo registro en la tabla 'uploads'.
  */
 function process_and_save_image($base64_string, $product_name, $conexion) {
-    if (!preg_match('~^data:image/(\w+);base64,~', $base64_string, $type)) {
+    if (!preg_match('~^data:image/(\\w+);base64,~', $base64_string, $type)) {
         throw new Exception('URI de datos de imagen inválido.');
     }
     
