@@ -148,6 +148,7 @@ export const App: React.FC = () => {
     const [categoryId, setCategoryId] = useState<number>(1);
     const [stockQuantity, setStockQuantity] = useState<number>(10);
     const [purchasePrice, setPurchasePrice] = useState<number>(0);
+    const [unit, setUnit] = useState<string>('UNI');
     const [generatedData, setGeneratedData] = useState<ProductData | null>(null);
     const [imageUrl, setImageUrl] = useState<string>('');
     const [imageUrl2, setImageUrl2] = useState<string>('');
@@ -431,6 +432,7 @@ export const App: React.FC = () => {
             tags: generatedData.tags,
             price: generatedData.price,
             purchasePrice: purchasePrice,
+            unit: unit,
             currency: generatedData.currency,
             imageUrl1: imageUrl,
             imageUrl2: imageUrl2,
@@ -482,7 +484,7 @@ export const App: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
-    }, [generatedData, imageUrl, imageUrl2, categoryId, stockQuantity, purchasePrice, apiUrl]);
+    }, [generatedData, imageUrl, imageUrl2, categoryId, stockQuantity, purchasePrice, unit, apiUrl]);
 
     const handleReset = useCallback(() => {
         setProductName('');
@@ -499,6 +501,7 @@ export const App: React.FC = () => {
         setIsImage2Loading(false);
         setShowApiGuide(false);
         setPurchasePrice(0);
+        setUnit('UNI');
     }, []);
     
     const isAnythingLoading = isGeneratingDetails || isImage1Loading || isImage2Loading;
@@ -567,6 +570,8 @@ export const App: React.FC = () => {
                                 setStockQuantity={setStockQuantity}
                                 purchasePrice={purchasePrice}
                                 setPurchasePrice={setPurchasePrice}
+                                unit={unit}
+                                setUnit={setUnit}
                                 tone={tone}
                                 setTone={setTone}
                                 temperature={temperature}

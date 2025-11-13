@@ -1,4 +1,5 @@
 
+
 export interface ProductData {
     productName: string;
     description: string; // Contendrá el HTML formateado
@@ -19,6 +20,7 @@ export interface ApiResponse {
     tags: string[];
     price: number;
     purchasePrice: number;
+    unit: string;
     currency: string;
     imageUrl1: string;
     imageUrl2: string;

@@ -7,7 +7,7 @@ const phpCode = `
 <?php
 // ===============================================================
 // 💾 API PARA GUARDAR PRODUCTOS (Compatible con ComprasPar)
-// v9.2 - Corregido error 'Column count doesn't match value count'.
+// v9.3 - Se lee la 'unit' (unidad) desde el JSON en lugar de usar un valor fijo.
 // ===============================================================
 
 // --- Cabeceras CORS ---
@@ -82,7 +82,7 @@ try {
 
     // Valores
     $user_id = 9;
-    $unit = 'UNI';
+    $unit = $input['unit'] ?? 'UNI';
     $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $input['productName']))) . '-' . uniqid();
     $choice_options = '[]';
     $colors = '[]';

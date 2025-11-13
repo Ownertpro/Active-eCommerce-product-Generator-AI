@@ -19,6 +19,8 @@ interface ProductInputProps {
     setStockQuantity: (qty: number) => void;
     purchasePrice: number;
     setPurchasePrice: (price: number) => void;
+    unit: string;
+    setUnit: (unit: string) => void;
     tone: string;
     setTone: (tone: string) => void;
     temperature: number;
@@ -35,7 +37,7 @@ interface ProductInputProps {
 export const ProductInput: React.FC<ProductInputProps> = ({ 
     productName, setProductName, onGenerate, isLoading, error, successMessage, 
     language, setLanguage, categoryId, setCategoryId, stockQuantity, setStockQuantity,
-    purchasePrice, setPurchasePrice,
+    purchasePrice, setPurchasePrice, unit, setUnit,
     tone, setTone, temperature, setTemperature, imageStyle, setImageStyle, aspectRatio, setAspectRatio,
     categories, isCategoriesLoading, categoriesError
 }) => {
@@ -70,8 +72,8 @@ export const ProductInput: React.FC<ProductInputProps> = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div className="sm:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div className="md:col-span-2">
                         <label htmlFor="category-select" className="block text-sm font-medium text-gray-400 mb-1">Categoría</label>
                         <select
                             id="category-select"
@@ -111,6 +113,18 @@ export const ProductInput: React.FC<ProductInputProps> = ({
                             value={purchasePrice}
                             onChange={(e) => setPurchasePrice(Number(e.target.value))}
                             min="0"
+                            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
+                            disabled={isLoading}
+                        />
+                    </div>
+                     <div>
+                        <label htmlFor="unit" className="block text-sm font-medium text-gray-400 mb-1">Unidad</label>
+                         <input
+                            id="unit"
+                            type="text"
+                            value={unit}
+                            onChange={(e) => setUnit(e.target.value)}
+                            placeholder="UNI, KG, ML"
                             className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
                             disabled={isLoading}
                         />
