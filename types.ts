@@ -18,6 +18,7 @@ export interface ApiResponse {
     metaDescription: string;
     tags: string[];
     price: number;
+    purchasePrice: number;
     currency: string;
     imageUrl1: string;
     imageUrl2: string;

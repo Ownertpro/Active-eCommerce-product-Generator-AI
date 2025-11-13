@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { CodeIcon } from './icons/CodeIcon';
 
@@ -121,7 +122,8 @@ export const CategoriesApiGuide: React.FC<{ onClose: () => void }> = ({ onClose 
                         Entendido, cerrar
                     </button>
                 </footer>
-                 <style jsx>{`
+                 {/* FIX: Removed the 'jsx' attribute from the <style> tag as it is not a standard React attribute and was causing a TypeScript error. */}
+                 <style>{`
                     .animate-fade-in {
                         animation: fadeIn 0.3s ease-in-out;
                     }

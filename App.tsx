@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { ProductInput } from './components/ProductInput';
 import { ProductCard } from './components/ProductCard';
@@ -13,14 +14,14 @@ import { CategoriesApiGuide } from './components/CategoriesApiGuide';
 
 // FIX: Resolved conflicting global type declarations for `window.aistudio` by using a named interface `AIStudio`.
 // This allows TypeScript to merge declarations from different sources correctly.
+// FIX: Made `aistudio` optional to resolve "All declarations of 'aistudio' must have identical modifiers" error.
+// This can happen if another declaration (e.g., in a library's .d.ts file) also defines `aistudio` but as optional.
 declare global {
     interface AIStudio {
         hasSelectedApiKey: () => Promise<boolean>;
         openSelectKey: () => Promise<void>;
     }
     interface Window {
-        // FIX: Made `aistudio` optional to resolve "All declarations of 'aistudio' must have identical modifiers" error.
-        // This can happen if another declaration (e.g., in a library's .d.ts file) also defines `aistudio` but as optional.
         aistudio?: AIStudio;
     }
 }
@@ -146,6 +147,7 @@ export const App: React.FC = () => {
     const [language, setLanguage] = useState<'es' | 'en'>('es');
     const [categoryId, setCategoryId] = useState<number>(1);
     const [stockQuantity, setStockQuantity] = useState<number>(10);
+    const [purchasePrice, setPurchasePrice] = useState<number>(0);
     const [generatedData, setGeneratedData] = useState<ProductData | null>(null);
     const [imageUrl, setImageUrl] = useState<string>('');
     const [imageUrl2, setImageUrl2] = useState<string>('');
@@ -294,6 +296,13 @@ export const App: React.FC = () => {
         if (error) setError(null);
         if (successMessage) setSuccessMessage(null);
     };
+    
+    const handleDataChange = (field: keyof ProductData, value: string | number | string[]) => {
+        setGeneratedData(prevData => {
+            if (!prevData) return null;
+            return { ...prevData, [field]: value };
+        });
+    };
 
     const handleGenerate = useCallback(async () => {
         if (!productName.trim()) {
@@ -421,6 +430,7 @@ export const App: React.FC = () => {
             metaDescription: generatedData.metaDescription,
             tags: generatedData.tags,
             price: generatedData.price,
+            purchasePrice: purchasePrice,
             currency: generatedData.currency,
             imageUrl1: imageUrl,
             imageUrl2: imageUrl2,
@@ -472,7 +482,7 @@ export const App: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
-    }, [generatedData, imageUrl, imageUrl2, categoryId, stockQuantity, apiUrl]);
+    }, [generatedData, imageUrl, imageUrl2, categoryId, stockQuantity, purchasePrice, apiUrl]);
 
     const handleReset = useCallback(() => {
         setProductName('');
@@ -488,6 +498,7 @@ export const App: React.FC = () => {
         setIsImage1Loading(false);
         setIsImage2Loading(false);
         setShowApiGuide(false);
+        setPurchasePrice(0);
     }, []);
     
     const isAnythingLoading = isGeneratingDetails || isImage1Loading || isImage2Loading;
@@ -554,6 +565,8 @@ export const App: React.FC = () => {
                                 setCategoryId={setCategoryId}
                                 stockQuantity={stockQuantity}
                                 setStockQuantity={setStockQuantity}
+                                purchasePrice={purchasePrice}
+                                setPurchasePrice={setPurchasePrice}
                                 tone={tone}
                                 setTone={setTone}
                                 temperature={temperature}
@@ -578,6 +591,9 @@ export const App: React.FC = () => {
                             {generatedData && (
                                 <ProductCard
                                     data={generatedData}
+                                    onDataChange={handleDataChange}
+                                    purchasePrice={purchasePrice}
+                                    onPurchasePriceChange={setPurchasePrice}
                                     imageUrl={imageUrl}
                                     imageUrl2={imageUrl2}
                                     isImage1Loading={isImage1Loading}

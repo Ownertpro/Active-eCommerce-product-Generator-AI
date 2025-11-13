@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { validateApiKey } from '../services/geminiService';
 
@@ -165,7 +166,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         ) : 'Guardar Cambios'}
                     </button>
                 </footer>
-                 <style jsx>{`
+                 {/* FIX: Removed the 'jsx' attribute from the <style> tag as it is not a standard React attribute and was causing a TypeScript error. */}
+                 <style>{`
                     .animate-fade-in {
                         animation: fadeIn 0.3s ease-in-out;
                     }

@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import type { ProductData } from '../types';
 import { SparklesIcon } from './icons/SparklesIcon';
@@ -7,6 +8,9 @@ import { InteractiveImage } from './InteractiveImage';
 
 interface ProductCardProps {
     data: ProductData;
+    onDataChange: (field: keyof ProductData, value: any) => void;
+    purchasePrice: number;
+    onPurchasePriceChange: (price: number) => void;
     imageUrl: string;
     imageUrl2: string;
     isImage1Loading: boolean;
@@ -21,7 +25,10 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ 
-    data, 
+    data,
+    onDataChange,
+    purchasePrice,
+    onPurchasePriceChange,
     imageUrl, 
     imageUrl2, 
     isImage1Loading, 
@@ -35,15 +42,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     onReset 
 }) => {
     const [copySuccess, setCopySuccess] = useState(false);
-    
-    const formatCurrency = (amount: number, currencyCode: string) => {
-        const locale = currencyCode === 'PYG' ? 'es-PY' : 'en-US';
-        return new Intl.NumberFormat(locale, {
-            style: 'currency',
-            currency: currencyCode,
-            minimumFractionDigits: currencyCode === 'PYG' ? 0 : 2,
-        }).format(amount);
-    };
 
     const handleCopyHtml = () => {
         navigator.clipboard.writeText(data.description).then(() => {
@@ -113,10 +111,36 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700 overflow-hidden shadow-2xl animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
                 <div className="p-6 md:p-8 flex flex-col">
-                    <h2 className="text-3xl font-bold text-white mb-2">{data.productName}</h2>
-                    <p className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-6">
-                        {formatCurrency(data.price, data.currency)}
-                    </p>
+                    <h2 className="text-3xl font-bold text-white mb-4">{data.productName}</h2>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label htmlFor="sale-price" className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Precio de Venta</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">{data.currency}</span>
+                                <input
+                                    id="sale-price"
+                                    type="number"
+                                    value={data.price}
+                                    onChange={(e) => onDataChange('price', Number(e.target.value) || 0)}
+                                    className="w-full bg-gray-700/50 border border-gray-600 rounded-lg pl-14 pr-4 py-2 text-white text-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+                                />
+                            </div>
+                        </div>
+                         <div>
+                            <label htmlFor="purchase-price" className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Precio de Compra</label>
+                            <div className="relative">
+                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">{data.currency}</span>
+                                <input
+                                    id="purchase-price"
+                                    type="number"
+                                    value={purchasePrice}
+                                    onChange={(e) => onPurchasePriceChange(Number(e.target.value) || 0)}
+                                    className="w-full bg-gray-700/50 border border-gray-600 rounded-lg pl-14 pr-4 py-2 text-white text-xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="relative">
                          <button 
@@ -173,7 +197,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
              <footer className="p-6 border-t border-gray-700 flex flex-col items-center justify-center gap-4">
                 {renderFooterContent()}
              </footer>
-             <style jsx>{`
+             {/* FIX: Removed the 'jsx' attribute from the <style> tag as it is not a standard React attribute and was causing a TypeScript error. */}
+             <style>{`
                 .animate-fade-in {
                     animation: fadeIn 0.5s ease-in-out;
                 }

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { SparklesIcon } from './icons/SparklesIcon';
 import type { Category } from '../types';
@@ -16,6 +17,8 @@ interface ProductInputProps {
     setCategoryId: (id: number) => void;
     stockQuantity: number;
     setStockQuantity: (qty: number) => void;
+    purchasePrice: number;
+    setPurchasePrice: (price: number) => void;
     tone: string;
     setTone: (tone: string) => void;
     temperature: number;
@@ -32,6 +35,7 @@ interface ProductInputProps {
 export const ProductInput: React.FC<ProductInputProps> = ({ 
     productName, setProductName, onGenerate, isLoading, error, successMessage, 
     language, setLanguage, categoryId, setCategoryId, stockQuantity, setStockQuantity,
+    purchasePrice, setPurchasePrice,
     tone, setTone, temperature, setTemperature, imageStyle, setImageStyle, aspectRatio, setAspectRatio,
     categories, isCategoriesLoading, categoriesError
 }) => {
@@ -66,7 +70,7 @@ export const ProductInput: React.FC<ProductInputProps> = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div className="sm:col-span-2">
                         <label htmlFor="category-select" className="block text-sm font-medium text-gray-400 mb-1">Categoría</label>
                         <select
@@ -94,6 +98,18 @@ export const ProductInput: React.FC<ProductInputProps> = ({
                             type="number"
                             value={stockQuantity}
                             onChange={(e) => setStockQuantity(Number(e.target.value))}
+                            min="0"
+                            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
+                            disabled={isLoading}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="purchase-price" className="block text-sm font-medium text-gray-400 mb-1">Precio Compra</label>
+                         <input
+                            id="purchase-price"
+                            type="number"
+                            value={purchasePrice}
+                            onChange={(e) => setPurchasePrice(Number(e.target.value))}
                             min="0"
                             className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
                             disabled={isLoading}
@@ -213,7 +229,8 @@ export const ProductInput: React.FC<ProductInputProps> = ({
                     {successMessage && <p className="text-green-400">{successMessage}</p>}
                 </div>
             )}
-             <style jsx>{`
+             {/* FIX: Removed the 'jsx' attribute from the <style> tag as it is not a standard React attribute and was causing a TypeScript error. */}
+             <style>{`
                 details[open] .animate-fade-in {
                     animation: fadeIn 0.5s ease-in-out;
                 }

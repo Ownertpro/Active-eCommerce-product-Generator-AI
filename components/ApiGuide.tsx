@@ -1,12 +1,13 @@
 
+
 import React, { useState } from 'react';
 import { CodeIcon } from './icons/CodeIcon';
 
 const phpCode = `
 <?php
 // ===============================================================
-// 💾 By Paul Sanabria API PARA GUARDAR PRODUCTOS (Compatible con ComprasPar)
-// v9.0 - Ajustada la ruta de guardado en la base de datos para las imágenes.
+// 💾 API PARA GUARDAR PRODUCTOS (Compatible con ComprasPar)
+// v9.2 - Corregido error 'Column count doesn't match value count'.
 // ===============================================================
 
 // --- Cabeceras CORS ---
@@ -73,8 +74,8 @@ try {
 
     // 📝 1. INSERTAR DATOS EN LA TABLA 'products'
     $sql = "INSERT INTO products 
-        (name, added_by, user_id, category_id, photos, thumbnail_img, meta_img, tags, description, unit_price, current_stock, unit, meta_title, meta_description, meta_keywords, slug, choice_options, colors, published, approved, created_at, updated_at)
-        VALUES (?, 'admin', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())";
+        (name, added_by, user_id, category_id, photos, thumbnail_img, meta_img, tags, description, unit_price, purchase_price, current_stock, unit, meta_title, meta_description, meta_keywords, slug, choice_options, colors, published, approved, created_at, updated_at)
+        VALUES (?, 'admin', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())";
     
     $stmt = $conexion->prepare($sql);
     if ($stmt === false) throw new Exception("Error al preparar la consulta de productos: " . $conexion->error);
@@ -91,14 +92,15 @@ try {
     $description_to_save = $input['description'] ?? '';
     $tags_string = isset($input['tags']) && is_array($input['tags']) ? implode(',', array_map('htmlspecialchars', $input['tags'])) : '';
     $unit_price = floatval($input['price'] ?? 0);
+    $purchase_price = floatval($input['purchasePrice'] ?? 0);
     $meta_title = $name;
     $meta_description = $input['metaDescription'] ?? "Compra " . htmlspecialchars($name) . " al mejor precio.";
     $meta_keywords = $tags_string;
 
     $stmt->bind_param(
-        "siisssssdisssssss",
+        "siisssssddisssssss",
         $name, $user_id, $category_id, $photos_ids_string, $thumbnail_id_string, $meta_img_id_string, $tags_string,
-        $description_to_save, $unit_price, $current_stock, $unit, $meta_title, $meta_description,
+        $description_to_save, $unit_price, $purchase_price, $current_stock, $unit, $meta_title, $meta_description,
         $meta_keywords, $slug, $choice_options, $colors
     );
 
@@ -245,7 +247,8 @@ export const ApiGuide: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         Entendido, cerrar
                     </button>
                 </footer>
-                 <style jsx>{`
+                 {/* FIX: Removed the 'jsx' attribute from the <style> tag as it is not a standard React attribute and was causing a TypeScript error. */}
+                 <style>{`
                     .animate-fade-in {
                         animation: fadeIn 0.3s ease-in-out;
                     }
